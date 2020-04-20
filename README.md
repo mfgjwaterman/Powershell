@@ -1,4 +1,2 @@
 # Powershell
-My Powershell Scripts
-
-Some additional text
+This repository contains my PowerShell Script and other PowerShell related stuff.
