@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+    <OperatingSystems>
+        <OperatingSystem name="Windows Server 2012 R2 Standard" key="">
+            <Source>D:\DeploymentShare\Operating Systems\Windows Server 2012 R2 Evaluation</Source>
+            <ImageName>Windows Server 2012 R2 Standard Evaluation (Server with a GUI)</ImageName>
+        </OperatingSystem>
+        <OperatingSystem name="Windows Server 2016 Standard" key="">
+            <Source>D:\DeploymentShare\Operating Systems\Windows Server 2016 Evaluation</Source>
+            <ImageName>Windows Server 2016 Standard Evaluation (Desktop Experience)</ImageName>
+        </OperatingSystem>
+        <OperatingSystem name="Windows Server 2019 Standard" key="OS014CDrive">
+            <Source>D:\DeploymentShare\Operating Systems\Windows Server 2019 Evaluation</Source>
+            <ImageName>Windows Server 2019 Standard Evaluation (Desktop Experience)</ImageName>
+        </OperatingSystem>
+        <OperatingSystem name="Windows 10 Enterprise LTSC" key="">
+            <Source>D:\DeploymentShare\Operating Systems\Windows 10 Enterprise LTSC 2019 Evaluation</Source>
+            <ImageName>Windows 10 Enterprise LTSC</ImageName>
+        </OperatingSystem>
+    </OperatingSystems>
+    <ImageData>
+        <CaptureFolder>D:\DeploymentShare\Captures</CaptureFolder>
+        <StagingFolder>D:\Staging</StagingFolder>
+        <DestinationFolder>D:\Share</DestinationFolder>
+        <Oscdimg>C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg\oscdimg.exe</Oscdimg>
+        <BootPrompt>True</BootPrompt>
+        <RemoveSourceWim>True</RemoveSourceWim>
+    </ImageData>
+</Configuration>
