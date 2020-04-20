@@ -11,17 +11,15 @@ function Install-NuGetPackageProvider {
 
     Switch ( (Get-PackageProvider -ListAvailable).Name.Contains($NuGet) ) {
         
-        $False{ 
+        $False { 
             Install-PackageProvider -Name $NuGet -MinimumVersion $NuGetrequiredVersion -Force 
         }
         $True {
-            $NuGetVersion = (Find-PackageProvider -Name $NuGet | Select-Object -ExpandProperty Version).replace(".","")
-        }
-    } 
-
-    Switch ($NuGetVersion = (Find-PackageProvider -Name $NuGet | Select-Object -ExpandProperty Version).replace(".","")){
-        { ($NuGetVersion -lt $NuGetRequiredVersion) } { 
-            Install-PackageProvider -Name $NuGet -MinimumVersion $NuGetrequiredVersion -Force
+            Switch ( $NuGetVersion = (Find-PackageProvider -Name $NuGet | Select-Object -ExpandProperty Version).replace(".","") -as[int] ){
+                { ( $NuGetVersion -lt ( ($NuGetRequiredVersion).replace(".","") -as[int] ) ) } { 
+                    Install-PackageProvider -Name $NuGet -MinimumVersion $NuGetrequiredVersion -Force
+                }
+            }
         }
     }
 }
