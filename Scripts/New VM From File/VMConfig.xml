@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <vmdisks>
+    <disk basename="Windows 10 X64 - Eval" filename="Windows_10_Enterprise" extension="vhdx"></disk>
+    <disk basename="Windows Server 2012 R2" filename="Windows_Server_2012_R2__Standard" extension="vhdx"></disk>
+    <disk basename="Windows Server 2016" filename="Windows_Server_2016_Standard" extension="vhdx"></disk>
+    <disk basename="Windows Server 2019" filename="Windows_Server_2019_Standard" extension="vhdx"></disk>
+    <parentdatastore path="C:\VHDs\Hyper-V\Parent Disks"></parentdatastore>
+    <childdatastore path="C:\VHDs\Hyper-V\Folder"></childdatastore>
+  </vmdisks>
+  <vmconfig MemoryStartupBytes="1GB" generation="2" vmprocessorcount="2" MinimumBytes="1GB" MaximumBytes="1024GB" AutomaticCheckpointsEnabled="False" GuestServiceInterface="True" AddVMDvdDrive="True" EnableVMTPM="True" EnableSecureBoot="True" SecureBootTemplate="MicrosoftWindows" />
+  <vmswitch>
+    <switch name="External Virtual Switch"></switch>
+    <switch name="Default Switch"></switch>
+  </vmswitch>
+</Configuration>
