@@ -6,7 +6,7 @@ function Install-NuGetPackageProvider {
         [string]$NuGet = 'NuGet',
 
         [parameter(Mandatory=$false)]
-        [String]$NuGetRequiredVersion = '2.8.5.201'
+        [version]$NuGetRequiredVersion = '2.8.5.201'
     )
 
     Switch ( (Get-PackageProvider -ListAvailable).Name.Contains($NuGet) ) {
@@ -15,8 +15,8 @@ function Install-NuGetPackageProvider {
             Install-PackageProvider -Name $NuGet -MinimumVersion $NuGetrequiredVersion -Force 
         }
         $True {
-            Switch ( $NuGetVersion = (Find-PackageProvider -Name $NuGet | Select-Object -ExpandProperty Version).replace(".","") -as[int] ){
-                { ( $NuGetVersion -lt ( ($NuGetRequiredVersion).replace(".","") -as[int] ) ) } { 
+            Switch ( Find-PackageProvider -Name $NuGet | Select-Object version ){
+                { ( [version]$_.Version -lt $NuGetRequiredVersion ) } { 
                     Install-PackageProvider -Name $NuGet -MinimumVersion $NuGetrequiredVersion -Force
                 }
             }
