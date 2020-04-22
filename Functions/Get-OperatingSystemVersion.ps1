@@ -6,7 +6,7 @@ function Get-OperatingSystemVersion {
    )
    Switch ( Get-CimInstance -Class Win32_OperatingSystem ){
       {([version]$_.Version -le $MinimalVersionRequired )}{ 
-         Write-Error " $($_.Caption) is not supported"
+         Write-Error -Message "$( (Get-WmiObject -Class Win32_Operatingsystem).caption ) is not a supported Windows version."
        }
    }
 }
