@@ -1,14 +1,14 @@
 function Test-PSModule {
     param (
       [parameter(Mandatory=$false)]
-      [string]$ModuleName = ""
+      [string]$Module
     )
-    
-    switch ( (Get-Module -ListAvailable).name.Contains($ModuleName) ) {
-        $true { 
+
+    switch (  [string]::IsNullOrEmpty( ( Get-Module -Name $Module -ListAvailable ) ) ){
+        $false { 
             Write-Verbose "Module has been located" 
         }
-        $false {
+        $true {
             Write-Error "PowerShell Module has not been found, please install before continuing"
         }
     }
