@@ -1,15 +1,16 @@
-function Test-AzContext {
+function Test-AzContext ([string]$Tenant, [string]$Subscription) {
 
     switch ( [string]::IsNullOrEmpty( ( Get-AzContext ) ) )
     {
         $false
         {
-            Write-Output "You are logged into Azure"
+            Write-Verbose "Authentication to Azure successfully established."
         }
         $true
         {
-            Connect-AzAccount
+            Connect-AzAccount   -Tenant $Tenant `
+                                -Subscription $Subscription `
+                                -ErrorAction Stop
         }
     }
-
 }
