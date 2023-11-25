@@ -15,21 +15,21 @@
 
     .DESCRIPTION
     This script Retreives Event log data regarding NTLM V1 events from assigned servers and generates
-    an CSV file from the data.
+    a CSV file from the data.
 
     Please note that this script requires Windows Server 2016 or above.
 
     .EXAMPLE
     Get-NTLMV1EventsLogs.ps1 -TimeFilter "24 Hours"
-    Retreive all NTLM V1 events from all Domain Controllers
+    Retreive all NTLM V1 events from all Domain Controllers.
 
     .EXAMPLE
     Get-NTLMV1EventsLogs.ps1 -TimeFilter "24 Hours" -Servers SRV01,SRV02
-    Retreive all NTLM V1 events from all given servers
+    Retreive all NTLM V1 events from all given servers.
 
     .EXAMPLE
     Get-NTLMV1EventsLogs.ps1 -Path C:\Events -TimeFilter "24 Hours"
-    Retreive all NTLM V1 events from all Domain Controllers and store the csv file in c:\Events
+    Retreives all NTLM V1 events from all Domain Controllers and store the csv file in c:\Events.
 
     .NOTES
     AUTHOR: Michael Waterman
