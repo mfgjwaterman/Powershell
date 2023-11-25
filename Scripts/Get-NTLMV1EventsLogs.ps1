@@ -11,13 +11,13 @@
 
 <#
     .SYNOPSIS
-    retreive NTLMv1 Event log data from remote servers
+    Retreive NTLMv1 Event log data from remote servers
 
     .DESCRIPTION
     This script Retreives Event log data regarding NTLM V1 events from assigned servers and generates
     a CSV file from the data.
 
-    Please note that this script requires Windows Server 2016 or above.
+    Please note that this script requires a Windows Domain Joined Machine.
 
     .EXAMPLE
     Get-NTLMV1EventsLogs.ps1 -TimeFilter "24 Hours"
