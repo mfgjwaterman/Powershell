@@ -1,7 +1,7 @@
 ﻿#Requires -Version 5.1
 
 <#PSScriptInfo
-    .VERSION 1.1
+    .VERSION 1.2
     .GUID 1b1d52f9-c6f9-4430-b67e-a17db25dbe7d
     .AUTHOR Michael Waterman
     .COMPANYNAME None
@@ -25,7 +25,7 @@
     Remote Event Log Management (RPC-EPMAP)
 
     .EXAMPLE
-    Get-RemoteNTLMEvents.ps1 -TimeFilter "24 Hours"
+    Get-RemoteNTLMEvents.ps1
     Retreive all NTLM V1 events from all Domain Controllers.
 
     .EXAMPLE
@@ -39,6 +39,10 @@
     .EXAMPLE
     Get-RemoteNTLMEvents.ps1 -TimeFilter "24 Hours" -AuthFilter 'LM, NTLMv1, NTLMv2'
     Retreives all NTLM events from all Domain Controllers and store the csv file in c:\Events.
+
+    .EXAMPLE
+    Get-RemoteNTLMEvents.ps1 -Servers log -Logname ForwardedEvents -TimeFilter 'Last 30 days'
+    retreives all NTMLv1 and LM event between now and 30 days ago, from a WEF server (Event Log: ForwardedEvents)
 
     .NOTES
     AUTHOR: Michael Waterman
@@ -55,7 +59,7 @@ param(
     )]
 [string]$Path="C:\Events",
 [Parameter(
-    Mandatory=$true
+    Mandatory=$false
     )]
 [ValidateSet(
     "Last Hour", 
@@ -75,6 +79,14 @@ param(
     ParameterSetName = 'Servers'
     )]
 [array]$Servers,
+[Parameter(
+    Mandatory=$false
+    )]
+[ValidateSet(
+    "Security",
+    "ForwardedEvents"
+    )]
+[array]$Logname="Security",
 [Parameter(
     Mandatory=$false
     )]
@@ -159,7 +171,8 @@ Function Get-NTLMv1Events($hostname){
  Write-Host "Analysing host $hostname, please wait..." -ForegroundColor Green
  
  try {
- $NTLMv1Events = Get-WinEvent -LogName "Security" -FilterXPath $xpath -ComputerName $hostname -ErrorAction SilentlyContinue
+
+ $NTLMv1Events = Get-WinEvent -LogName $Logname -FilterXPath $xpath -ComputerName $hostname -ErrorAction SilentlyContinue
  
     $NTLMv1Events | ForEach-Object {
     $RetObject = [ordered]@{
