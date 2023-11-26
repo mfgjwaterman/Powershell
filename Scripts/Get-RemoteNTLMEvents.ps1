@@ -132,10 +132,9 @@ Switch ( $AuthFilter )
 {
     "LM and NTLMv1" { $AuthRange = "Data='NTLM V1' or Data='LM'" }
     "NTLMv2" { $AuthRange = "Data='NTLM V2'" }
-    "LM, NTLMv1 & NTLMv2" { $AuthRange = "Data='NTLM V1' or Data='LM' or Data='NTLM V2'" }
+    "LM, NTLMv1, NTLMv2" { $AuthRange = "Data='NTLM V1' or Data='LM' or Data='NTLM V2'" }
 
 }
-
 ##############################################################################################
 
 
@@ -160,7 +159,7 @@ Function Get-NTLMv1Events($hostname){
  Write-Host "Analysing host $hostname, please wait..." -ForegroundColor Green
  
  try {
- $NTLMv1Events = Get-WinEvent -LogName "Security" -FilterXPath $xpath -ComputerName $hostname
+ $NTLMv1Events = Get-WinEvent -LogName "Security" -FilterXPath $xpath -ComputerName $hostname -ErrorAction SilentlyContinue
  
     $NTLMv1Events | ForEach-Object {
     $RetObject = [ordered]@{
@@ -197,6 +196,17 @@ catch {
 ##############################################################################################
 
 
+# Get Event logs from Specified Servers
+##############################################################################################
+If($Servers){
+ $DC=$false
+ foreach($Server in $Servers){
+    Get-NTLMv1Events $Server
+ }
+}
+##############################################################################################
+
+
 # Get Event logs from Domain Controllers
 ##############################################################################################
 If($DC){
@@ -204,15 +214,5 @@ If($DC){
     
         Get-NTLMv1Events($DomainController.HostName)
     }
-}
-##############################################################################################
-
-
-# Get Event logs from Specified Servers
-##############################################################################################
-If($Servers){
- foreach($Server in $Servers){
-    Get-NTLMv1Events $Server
- }
 }
 ##############################################################################################
