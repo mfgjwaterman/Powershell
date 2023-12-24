@@ -1,5 +1,6 @@
 ﻿#Requires -Version 5.1
 #Requires -RunAsAdministrator
+#Requires -modules ActiveDirectory
 
 <#PSScriptInfo
     .VERSION 1.0
@@ -96,19 +97,6 @@ Function Test-ADGroup ($ADSecurityGroup) {
        }
     Catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException]{
        throw $_.Exception.Message
-    }
-}
-##############################################################################################
-
-
-# Check ActiveDirectory Module
-##############################################################################################
-If($DC){
-    If (-not (Get-Module -ListAvailable | Where-Object Name -eq "ActiveDirectory") ){
-        Write-Error "ActiveDirectory Module not found. Please install the RSAT Active Directory Module"
-        Return
-    } Else {
-        Import-Module ActiveDirectory
     }
 }
 ##############################################################################################
