@@ -1,0 +1,2 @@
+﻿Get-ADComputer -Filter "OperatingSystem -Like '*Windows Server*' -and Enabled -eq 'True'" `
+    | select -ExpandProperty name | % { Invoke-Command -ComputerName $_ -ScriptBlock { cmd.exe /c gpupdate } } -ErrorAction SilentlyContinue
