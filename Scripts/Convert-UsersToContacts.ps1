@@ -111,7 +111,6 @@ foreach($user in $users){
     if(-not ([string]::IsNullOrEmpty($user.ipPhone))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'ipPhone'=$user.ipPhone}}
     if(-not ([string]::IsNullOrEmpty($user.info))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'info'=$user.info}}
     if(-not ([string]::IsNullOrEmpty($user.Title))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'Title'=$user.Title}}
-    if(-not ([string]::IsNullOrEmpty($user.Title))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'Title'=$user.Title}}
     if(-not ([string]::IsNullOrEmpty($user.Department))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'Department'=$user.Department}}
     if(-not ([string]::IsNullOrEmpty($user.Company))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'Company'=$user.Company}}
     if(-not ([string]::IsNullOrEmpty($user.Manager))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'Manager'=$user.Manager}}
