@@ -2,12 +2,12 @@
 #Requires -Version 5.1
 
 <#PSScriptInfo
-    .VERSION 1.0
+    .VERSION 1.1
     .GUID f1128939-3828-42d2-b22e-daf4d81e662c
     .AUTHOR Michael Waterman
     .COMPANYNAME None
     .COPYRIGHT
-    .TAGS Active Directory, Users, Contacts
+    .TAGS Active Directory, Users, Contacts, Exchange
 #>
 
 <#
@@ -28,12 +28,18 @@
     .EXAMPLE
     Convert-UsersToContacts.ps1 -SearchBase "OU=Contacts,OU=Organisation,DC=security,DC=local" -Cleanup:$true
     Get all the users in the given OU, create new Contact objects in the same OU using the attributes of the user 
-    that are applicable to a contact object, but deletes the user object instead or renaming it. 
-   
+    that are applicable to a contact object, but deletes the user object instead or renaming it.
+
+    .EXAMPLE
+    Convert-UsersToContacts.ps1 -SearchBase "OU=Contacts,OU=Organisation,DC=security,DC=local" -IncludeExchange
+    Get all the users in the given OU, create new Contact objects in the same OU using the attributes of the user 
+    that are applicable to a contact object including the Exchange attributes
+
+
     .NOTES
     AUTHOR: Michael Waterman
     Blog: https://michaelwaterman.nl
-    LASTEDIT: 2024.05.20
+    LASTEDIT: 2024.05.24
 #>
 
 
@@ -50,9 +56,32 @@ param(
 [Parameter(
     Mandatory=$false
     )]
-[switch]$Cleanup = $false
+[switch]$Cleanup = $false,
+[Parameter(
+    Mandatory=$false
+    )]
+[switch]$IncludeExchange = $true
 )
 
+
+# Check if Exchange is installed
+If($IncludeExchange){
+    $DefaultNamingContext = (Get-ADRootDSE).DefaultNamingContext
+    $ExchangeDN = "CN=Microsoft Exchange System Objects," + $DefaultNamingContext
+
+    try   {
+
+            Get-ADObject $ExchangeDN  -ErrorAction Stop | Out-Null
+          }
+
+    catch {
+
+          Write-Host "Exchange Schema is not found" -ForegroundColor Red
+          Return
+    }
+}
+
+# Ask if cleanup is to be executed
 If($Cleanup){
     Write-Host "You selected the option to delete the user objects." -ForegroundColor Red
     Write-Host "This action is not reversible, are you sure you wish to continue?" -ForegroundColor Red
@@ -87,7 +116,7 @@ foreach($user in $users){
     # Create the contact
     $contact = New-ADObject -Type 'Contact' -Name $user.Name -Path $SearchBase -PassThru
 
-    # Set the Attributes
+    # Set the Regular Attributes
     if(-not ([string]::IsNullOrEmpty($user.GivenName))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'GivenName'=$user.GivenName}}
     if(-not ([string]::IsNullOrEmpty($user.sn))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'sn'=$user.sn}}
     if(-not ([string]::IsNullOrEmpty($user.DisplayName))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'DisplayName'=$user.DisplayName}}
@@ -114,6 +143,32 @@ foreach($user in $users){
     if(-not ([string]::IsNullOrEmpty($user.Department))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'Department'=$user.Department}}
     if(-not ([string]::IsNullOrEmpty($user.Company))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'Company'=$user.Company}}
     if(-not ([string]::IsNullOrEmpty($user.Manager))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'Manager'=$user.Manager}}
+
+    # Set the Exchange Attributes
+    If($IncludeExchange){
+        if(-not ([string]::IsNullOrEmpty($user.internetEncoding))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'internetEncoding'=$user.internetEncoding}}
+        if(-not ([string]::IsNullOrEmpty($user.legacyExchangeDN))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'legacyExchangeDN'=$user.legacyExchangeDN}}
+        if(-not ([string]::IsNullOrEmpty($user.mailNickname))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'mailNickname'=$user.mailNickname}}
+        if(-not ([string]::IsNullOrEmpty($user.msExchPoliciesExcluded))){Foreach($Object in ($user.msExchPoliciesExcluded)){
+                Set-ADObject -Identity $contact.DistinguishedName -Add @{'msExchPoliciesExcluded'=$Object}
+            }
+        }
+        if(-not ([string]::IsNullOrEmpty($user.msExchRecipientDisplayType))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'msExchRecipientDisplayType'=$user.msExchRecipientDisplayType}}
+        if(-not ([string]::IsNullOrEmpty($user.msExchUMDtmfMap))){Foreach($Object in ($user.msExchUMDtmfMap)){
+               Set-ADObject -Identity $contact.DistinguishedName -Add @{'msExchUMDtmfMap'=$Object}
+            }
+        }
+        if(-not ([string]::IsNullOrEmpty($user.msExchVersion))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'msExchVersion'=$user.msExchVersion}}
+        if(-not ([string]::IsNullOrEmpty($user.proxyAddresses))){Foreach($Object in ($user.proxyAddresses)){
+               Set-ADObject -Identity $contact.DistinguishedName -Add @{'proxyAddresses'=$Object}
+            }
+        }
+        if(-not ([string]::IsNullOrEmpty($user.showInAddressBook))){Foreach($Object in ($user.showInAddressBook)){
+               Set-ADObject -Identity $contact.DistinguishedName -Add @{'showInAddressBook'=$Object}
+            }
+        }
+        if(-not ([string]::IsNullOrEmpty($user.targetAddress))){Set-ADObject -Identity $contact.DistinguishedName -Add @{'targetAddress'=$user.targetAddress}}
+    }
 
     # Set the security groups
     foreach($group in $groups){
