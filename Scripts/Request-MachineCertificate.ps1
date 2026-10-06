@@ -34,7 +34,7 @@
     A pending request can be resumed on the same machine using its request-store
     thumbprint. The original request contains the enrollment server information;
     Template, SAN, SubjectName, CepUrl and UseADPolicy are not supplied when resuming.
-    A saved destination is restored unless explicitly overridden.
+    A saved destination and optional friendly name are restored unless overridden.
 
 .PARAMETER CertStoreLocation
     Final application certificate store. Default: Cert:\LocalMachine\My.
@@ -47,6 +47,18 @@
     Pending requests remember this setting in HKLM. Resume restores it unless
     explicitly overridden. Older requests without metadata default to My;
     specify this parameter when resuming if another destination is intended.
+
+.PARAMETER FriendlyName
+    Optional local display name for the issued certificate, 1 through 260
+    characters. Available for new requests and resume. Whitespace-only names
+    and embedded null characters are rejected. Duplicate display names are allowed.
+    Applied only after installation in the final store and private-key verification.
+    This is local store metadata, not a CSR field or signed certificate extension.
+    When omitted, preserves the existing display name; no name is generated.
+    Pending requests save this setting alongside the destination in HKLM.
+    Resume restores a saved name unless FriendlyName is explicitly supplied.
+    If setting or verification fails, warns and logs the error but still returns
+    the installed certificate. Do not submit a replacement request for this warning.
 
 .PARAMETER LogDirectory
     Filesystem directory for a unique UTF-8 log per invocation.
@@ -284,6 +296,24 @@
     Uses explicit credentials with the configured default policy. The policy and
     discovered enrollment endpoints must support username/password authentication.
 
+.EXAMPLE
+    .\Request-MachineCertificate.ps1 `
+        -Template RequestLabActiveDirectoryTLSCertificate `
+        -SAN 'test.corp.domain.com' `
+        -CertStoreLocation 'Cert:\LocalMachine\WebHosting' `
+        -FriendlyName 'Lab TLS - test.corp.domain.com'
+
+    Sets the display name on the issued certificate in WebHosting.
+    The supplied name is remembered if the request remains pending.
+
+.EXAMPLE
+    .\Request-MachineCertificate.ps1 `
+        -PendingRequestThumbprint 'F47AD2BFAF82ACA16005569392DB3D5D40696024' `
+        -FriendlyName 'Lab TLS - updated display name'
+
+    Resumes the original request and overrides any saved friendly name.
+    Omit FriendlyName to restore the previously saved value automatically.
+
 .INPUTS
     None. Parameters are supplied explicitly; pipeline input is not accepted.
 
@@ -294,9 +324,9 @@
 .NOTES
     Author       : Michael Waterman
     Website      : https://michaelwaterman.nl
-    Version      : 1.2.0.0
+    Version      : 1.3.0.0
     Script ID    : 2bc8c7ad-463e-4b91-965a-46d99da1a0cb
-    Last updated : 2026-10-05
+    Last updated : 2026-10-06
 
     Requirements:
     - Windows PowerShell 5.1 (powershell.exe), run locally as administrator.
@@ -371,6 +401,15 @@ param(
     [ValidateNotNullOrEmpty()]
     [string]$CertStoreLocation = 'Cert:\LocalMachine\My',
     [ValidateNotNullOrEmpty()]
+    [ValidateLength(1, 260)]
+    [ValidateScript({
+        if ([string]::IsNullOrWhiteSpace($_) -or $_.Contains([string][char]0)) {
+            throw 'FriendlyName must contain visible text and cannot contain null characters.'
+        }
+        $true
+    })]
+    [string]$FriendlyName,
+    [ValidateNotNullOrEmpty()]
     [string]$LogDirectory = "$env:SystemRoot\Temp",
     [ValidateSet('Info', 'Debug')]
     [string]$LogLevel = 'Info'
@@ -433,7 +472,7 @@ function Open-ApplicationStore {
     $store
 }
 
-# HKLM protects pending destination metadata from normal user writes. No secrets.
+# HKLM protects pending destination/display-name metadata from normal user writes. No secrets.
 $stateRoot = 'HKLM:\SOFTWARE\MW\RequestMachineCertificate\Pending'
 $statePath = $null
 $locationPushed = $false
@@ -454,6 +493,19 @@ try {
             $CertStoreLocation = (Get-ItemProperty -LiteralPath $statePath -Name CertStoreLocation).CertStoreLocation
             Write-EnrollmentLog "Restored pending destination $CertStoreLocation."
         }
+        if (-not $PSBoundParameters.ContainsKey('FriendlyName') -and (Test-Path -LiteralPath $statePath)) {
+            # Older pending requests may have no FriendlyName property.
+            $savedState = Get-ItemProperty -LiteralPath $statePath
+            $savedName = $savedState.PSObject.Properties['FriendlyName']
+            if ($savedName -and -not [string]::IsNullOrEmpty([string]$savedName.Value)) {
+                $FriendlyName = [string]$savedName.Value
+                Write-EnrollmentLog 'Restored pending friendly name.'
+            }
+        }
+    }
+    # Validate restored metadata too; parameter validators only run on bound values.
+    if ($FriendlyName -and ($FriendlyName.Length -gt 260 -or [string]::IsNullOrWhiteSpace($FriendlyName) -or $FriendlyName.Contains([string][char]0))) {
+        throw 'Saved FriendlyName is invalid. Supply a valid -FriendlyName when resuming.'
     }
     $targetName = Get-TargetStoreName $CertStoreLocation
     $CertStoreLocation = "Cert:\LocalMachine\$targetName"
@@ -550,7 +602,14 @@ try {
         try {
             New-Item -Path $statePath -Force -ErrorAction Stop | Out-Null
             New-ItemProperty -LiteralPath $statePath -Name CertStoreLocation -Value $CertStoreLocation -PropertyType String -Force -ErrorAction Stop | Out-Null
+            if ($FriendlyName) {
+                New-ItemProperty -LiteralPath $statePath -Name FriendlyName -Value $FriendlyName -PropertyType String -Force -ErrorAction Stop | Out-Null
+            }
         } catch {
+            if ($FriendlyName) {
+                Write-EnrollmentLog 'Pending metadata could not be fully saved. Supply FriendlyName and CertStoreLocation explicitly when resuming.' 'WARNING'
+                Write-Warning 'Pending metadata was not fully saved. When resuming, also supply -FriendlyName with the intended display name.'
+            }
             Write-EnrollmentLog "Could not persist destination. Resume must specify -CertStoreLocation '$CertStoreLocation'." 'WARNING'
             Write-Warning "Destination was not saved. When resuming, include -CertStoreLocation '$CertStoreLocation'."
         }
@@ -618,6 +677,34 @@ try {
         } finally {
             if ($sourceStore) { $sourceStore.Close() }
             $destination.Close()
+        }
+    }
+    if ($FriendlyName) {
+        # Reopen the final store and select by thumbprint, never by display name.
+        $nameStore = $null
+        try {
+            $nameStore = Open-ApplicationStore $targetName
+            $matchesByThumbprint = @($nameStore.Certificates.Find([System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint, $installed.Thumbprint, $false))
+            if ($matchesByThumbprint.Count -ne 1 -or -not $matchesByThumbprint[0].HasPrivateKey) {
+                throw 'Final certificate/private-key verification failed before setting FriendlyName.'
+            }
+            $matchesByThumbprint[0].FriendlyName = $FriendlyName
+            $nameStore.Close()
+            $nameStore = $null
+            # Read back through a fresh store context to verify persistence.
+            $nameStore = Open-ApplicationStore $targetName
+            $namedCertificate = @($nameStore.Certificates.Find([System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint, $installed.Thumbprint, $false))
+            if ($namedCertificate.Count -ne 1 -or -not $namedCertificate[0].HasPrivateKey -or $namedCertificate[0].FriendlyName -cne $FriendlyName) {
+                throw 'FriendlyName persistence/private-key verification failed.'
+            }
+            $installed = $namedCertificate[0]
+            Write-Host "Friendly name: $FriendlyName"
+            Write-EnrollmentLog "Friendly name verified in ${CertStoreLocation}: $FriendlyName."
+        } catch {
+            Write-EnrollmentLog ('Certificate installed, but FriendlyName could not be set or verified: exception={0}; HRESULT={1}.' -f $_.Exception.GetType().FullName, $_.Exception.HResult) 'WARNING'
+            Write-Warning "Certificate $($installed.Thumbprint) is already installed in $CertStoreLocation, but its friendly name could not be set or verified. Check the store and update the name locally; do not submit another request. $($_.Exception.Message)"
+        } finally {
+            if ($nameStore) { $nameStore.Close() }
         }
     }
     if ($statePath -and (Test-Path -LiteralPath $statePath)) {
